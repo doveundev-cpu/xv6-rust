@@ -1,0 +1,17 @@
+[build]
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+linker = "rust-lld"
+rustflags = [
+    "-C", "link-arg=-Tsrc/lds/kernel.ld",
+    "-C", "link-arg=-z",
+    "-C", "link-arg=norelro",
+]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
