@@ -1,53 +1,33 @@
 #![no_std]
 #![no_main]
 
-use core::arch::{asm, naked_asm};
+mod uart;
+
+use core::fmt::Write;
 use core::panic::PanicInfo;
+use uart::Uart;
 
-// Entry point: naked function, không có prologue/epilogue
-#[unsafe(naked)]
-#[unsafe(no_mangle)]
-#[unsafe(link_section = ".text.boot")]
-unsafe extern "C" fn _start() -> ! {
-    naked_asm!(
-        // Chỉ hart 0 được chạy, các hart khác ngủ
-        "csrr t0, mhartid",
-        "bnez t0, 1f",
-
-        // Thiết lập stack pointer
-        "la   sp, _stack_top",
-
-        // Xóa BSS
-        "la   t0, _bss_start",
-        "la   t1, _bss_end",
-        "2:",
-        "bgeu t0, t1, 3f",
-        "sd   zero, 0(t0)",
-        "addi t0, t0, 8",
-        "j    2b",
-        "3:",
-
-        // Nhảy vào kernel main
-        "call kmain",
-
-        // Nếu kmain return (không nên) thì loop mãi
-        "1:",
-        "wfi",
-        "j 1b",
-
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn kmain() {
-    loop {
-        unsafe {
-            asm!("wfi");
-        }
-    }
-}
-
+/// Hàm này sẽ được gọi khi code xảy ra lỗi (panic).
+/// Vì không có hệ điều hành, chúng ta chỉ có thể lặp vô tận.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
+}
+
+/// Điểm nhập của hệ điều hành.
+/// `export_name` đảm bảo linker tìm thấy ký hiệu này.
+#[unsafe(no_mangle)]
+pub extern "C" fn _start() -> ! {
+    // Sau này code khởi tạo UART và Kernel sẽ nằm ở đây
+    let mut uart = Uart::new(0x10000000);
+    uart.init();
+
+    let _ = write!(uart, "Hello, xv6-rust!\n");
+
+    loop {
+        // Sử dụng inline assembly để tạm dừng CPU tiết kiệm điện
+        unsafe {
+            core::arch::asm!("wfi");
+        }
+    }
 }
