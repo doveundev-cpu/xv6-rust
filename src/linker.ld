@@ -22,7 +22,14 @@ SECTIONS
 
     .bss : {
         *(.bss .bss.*)
+        . = ALIGN(16);
+        _stack_start = .;
+        . += 0x10000; /* 64KB stack */
+        _stack_end = .;
     }
+
+    . = ALIGN(4096);
+    _end = .;
 
     /DISCARD/ : {
         *(.eh_frame)

@@ -24,6 +24,8 @@ impl Uart {
     pub fn putc(&self, c: u8) {
         let ptr = self.base_address as *mut u8;
         unsafe {
+            // Wait until Transmit Holding Register Empty (THRE) bit is set
+            while (core::ptr::read_volatile(ptr.add(5)) & (1 << 5)) == 0 {}
             write_volatile(ptr, c);
         }
     }
